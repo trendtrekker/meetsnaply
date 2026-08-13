@@ -83,7 +83,7 @@ that want a real session, so point it at the **direct** connection on port 5432
 | `DATABASE_URL` | yes | Pooled connection string |
 | `AUTH_SECRET` | yes | `openssl rand -base64 32` |
 | `ENCRYPTION_KEY` | yes | A *different* 32-byte value. Falls back to `AUTH_SECRET`, but then rotating your session key locks out every connected calendar |
-| `NEXT_PUBLIC_APP_URL` | only for a custom domain | The deployed origin. Every booking link, meeting URL, OAuth redirect, and email link is built from it. On Vercel you can leave it unset — `appUrl()` falls back to the injected `VERCEL_PROJECT_PRODUCTION_URL`. Set it explicitly the moment you point a real domain at the project |
+| `NEXT_PUBLIC_APP_URL` | yes | The deployed origin, e.g. `https://meetsnaply.vercel.app`. Every booking link, meeting URL, OAuth redirect, and email link is built from it. `appUrl()` falls back to `VERCEL_PROJECT_PRODUCTION_URL`, but **do not rely on that** — Vercel only injects it when the project exposes system environment variables, and it was missing on this project's first deploy, which produced `localhost` meeting links on a live booking |
 | `CRON_SECRET` | for emails | Vercel Cron sends it as a bearer token to `/api/jobs/run` |
 | `GOOGLE_CLIENT_ID` / `_SECRET` | optional | Redirect URI must be `<NEXT_PUBLIC_APP_URL>/api/calendar/google/callback` |
 | `RESEND_API_KEY`, `EMAIL_FROM` | optional | Without these, emails are logged, not sent |

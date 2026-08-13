@@ -7,12 +7,18 @@
  * which only shows up once somebody clicks.
  *
  * Resolution order:
- *  1. `NEXT_PUBLIC_APP_URL` — always wins, and is required for a custom domain.
- *  2. `VERCEL_PROJECT_PRODUCTION_URL` — injected by Vercel, protocol-less. The
- *     *production* domain rather than `VERCEL_URL`, which is unique per
- *     deployment: a preview URL baked into an email would 404 the moment that
- *     deployment was superseded.
+ *  1. `NEXT_PUBLIC_APP_URL` — **set this in production.** It is the only source
+ *     that is guaranteed to be present and correct.
+ *  2. `VERCEL_PROJECT_PRODUCTION_URL` — a convenience, not a guarantee. Vercel
+ *     only injects it when a project has "Automatically expose System
+ *     Environment Variables" enabled, and it was absent on the first deploy of
+ *     this project, which silently produced `localhost` meeting links. Treat it
+ *     as a nicety that saves a variable when it happens to be there.
  *  3. localhost, for development.
+ *
+ * `VERCEL_URL` is deliberately not consulted: it is unique per deployment, so a
+ * link built from it would 404 as soon as that deployment was superseded — which
+ * is worse than localhost, because it would look correct at send time.
  */
 export function appUrl(): string {
   const explicit = process.env.NEXT_PUBLIC_APP_URL?.trim();
