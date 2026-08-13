@@ -8,9 +8,10 @@ import {
   fetchAccountEmail,
   isGoogleConfigured,
 } from "@/lib/calendar/google";
+import { appUrl } from "@/lib/app-url";
 
 function back(status: string) {
-  const base = process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000";
+  const base = appUrl();
   return NextResponse.redirect(`${base}/dashboard/settings?calendar=${status}`);
 }
 

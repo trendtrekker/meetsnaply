@@ -15,6 +15,7 @@ import {
   type CancellationActor,
 } from "@/lib/email/templates/booking";
 import { describeLocation } from "./locations";
+import { appUrl } from "@/lib/app-url";
 
 /**
  * Booking lifecycle notifications: confirmation, host alert, and reminders.
@@ -25,7 +26,7 @@ import { describeLocation } from "./locations";
  */
 
 function origin() {
-  return process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000";
+  return appUrl();
 }
 
 /** Everything both the templates and the .ics need, loaded once. */

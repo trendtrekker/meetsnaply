@@ -2,9 +2,10 @@ import { NextResponse } from "next/server";
 import { SignJWT } from "jose";
 import { getCurrentUser } from "@/lib/auth";
 import { consentUrl, isGoogleConfigured } from "@/lib/calendar/google";
+import { appUrl } from "@/lib/app-url";
 
 function settingsUrl(error: string) {
-  const base = process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000";
+  const base = appUrl();
   return `${base}/dashboard/settings?calendar=${error}`;
 }
 
@@ -13,7 +14,7 @@ export async function GET() {
   const user = await getCurrentUser();
   if (!user) {
     return NextResponse.redirect(
-      `${process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000"}/login`,
+      `${appUrl()}/login`,
     );
   }
 

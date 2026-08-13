@@ -1,6 +1,7 @@
 import "server-only";
 import type { LocationType } from "@/generated/prisma/enums";
 import { createRoom, deleteRoom, isDailyConfigured } from "./daily";
+import { appUrl } from "@/lib/app-url";
 
 export { isDailyConfigured };
 
@@ -28,7 +29,7 @@ export async function provisionRoom(options: {
 }): Promise<ProvisionedRoom | null> {
   if (options.locationType !== "MEETSNAPLY_VIDEO") return null;
 
-  const base = process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000";
+  const base = appUrl();
 
   if (!isDailyConfigured()) {
     return { url: `${base}/call/${options.bookingUid}`, roomName: null };

@@ -6,6 +6,7 @@ import { Badge } from "@/components/ui/badge";
 import { Card, CardBody, CardHeader, CardTitle } from "@/components/ui/card";
 import { CalendarConnections } from "@/components/dashboard/calendar-connections";
 import { SettingsForm } from "@/components/dashboard/settings-form";
+import { appUrl } from "@/lib/app-url";
 
 export default async function SettingsPage({
   searchParams,
@@ -14,7 +15,7 @@ export default async function SettingsPage({
 }) {
   const user = await requireUser();
   const { calendar } = await searchParams;
-  const origin = process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000";
+  const origin = appUrl();
 
   const connections = await db.calendarConnection.findMany({
     where: { userId: user.id },

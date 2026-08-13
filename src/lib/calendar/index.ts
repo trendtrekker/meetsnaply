@@ -15,6 +15,7 @@ import {
   isGoogleConfigured,
   patchEvent,
 } from "./google";
+import { appUrl } from "@/lib/app-url";
 
 export { isGoogleConfigured };
 
@@ -147,12 +148,10 @@ function eventBody(booking: SyncableBooking) {
     booking.locationValue,
     booking.meetingUrl,
   );
-  const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000";
-
   const description = [
     booking.description,
     booking.meetingUrl ? `Join: ${booking.meetingUrl}` : null,
-    `Manage this booking: ${appUrl}/booking/${booking.uid}`,
+    `Manage this booking: ${appUrl()}/booking/${booking.uid}`,
   ]
     .filter(Boolean)
     .join("\n\n");

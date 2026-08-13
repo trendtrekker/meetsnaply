@@ -4,10 +4,11 @@ import { requireUser } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { EventTypeForm } from "@/components/dashboard/event-type-form";
 import { createEventType } from "@/lib/event-types/actions";
+import { appUrl } from "@/lib/app-url";
 
 export default async function NewEventTypePage() {
   const user = await requireUser();
-  const origin = process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000";
+  const origin = appUrl();
 
   const schedules = await db.schedule.findMany({
     where: { userId: user.id },

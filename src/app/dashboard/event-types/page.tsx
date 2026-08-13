@@ -6,10 +6,11 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { LOCATION_LABELS } from "@/lib/bookings/locations";
 import { formatDuration } from "@/lib/utils";
+import { appUrl } from "@/lib/app-url";
 
 export default async function EventTypesPage() {
   const user = await requireUser();
-  const origin = process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000";
+  const origin = appUrl();
 
   const eventTypes = await db.eventType.findMany({
     where: { userId: user.id },

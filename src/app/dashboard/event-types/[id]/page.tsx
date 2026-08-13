@@ -6,6 +6,7 @@ import { db } from "@/lib/db";
 import { Button } from "@/components/ui/button";
 import { EventTypeForm } from "@/components/dashboard/event-type-form";
 import { deleteEventType, updateEventType } from "@/lib/event-types/actions";
+import { appUrl } from "@/lib/app-url";
 
 interface PageProps {
   params: Promise<{ id: string }>;
@@ -14,7 +15,7 @@ interface PageProps {
 export default async function EditEventTypePage({ params }: PageProps) {
   const user = await requireUser();
   const { id } = await params;
-  const origin = process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000";
+  const origin = appUrl();
 
   const [eventType, schedules] = await Promise.all([
     db.eventType.findFirst({

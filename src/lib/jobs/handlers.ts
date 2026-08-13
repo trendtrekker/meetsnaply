@@ -32,6 +32,7 @@ import {
   sendCancellationNotice,
   sendRescheduleNotice,
 } from "@/lib/bookings/notifications";
+import { appUrl } from "@/lib/app-url";
 
 /**
  * The pipeline, one stage per handler:
@@ -374,7 +375,7 @@ const generateRecapJob: JobHandler = async (payload) => {
 
 const sendRecapJob: JobHandler = async (payload) => {
   const { bookingId } = parsePayload(bookingPayload, payload);
-  const origin = process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000";
+  const origin = appUrl();
 
   const booking = await db.booking.findUnique({
     where: { id: bookingId },

@@ -5,6 +5,7 @@ import { signOut } from "@/lib/auth/actions";
 import { Logo } from "@/components/brand/logo";
 import { CopyLinkButton } from "@/components/dashboard/copy-link-button";
 import { NavLink } from "@/components/dashboard/nav-link";
+import { appUrl } from "@/lib/app-url";
 
 const NAV = [
   { href: "/dashboard", label: "Bookings", icon: CalendarDays },
@@ -19,7 +20,7 @@ export default async function DashboardLayout({
   children: React.ReactNode;
 }) {
   const user = await requireUser();
-  const origin = process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000";
+  const origin = appUrl();
   const bookingLink = `${origin}/${user.username}`;
 
   return (
