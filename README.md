@@ -54,11 +54,20 @@ install. Set a real `AUTH_SECRET` before deploying anywhere
 Four things must be true before booking links work on a real domain.
 
 **1. A hosted Postgres.** The `docker-compose.yml` database is local only and is
-not reachable from Vercel. Provision Neon, Supabase, or Vercel Postgres and use
-its **pooled** connection string — serverless functions open a connection per
-invocation and will exhaust a direct connection limit under any real traffic.
-Most providers hand you a pooler URL ending in `-pooler`; it usually needs
-`?sslmode=require`.
+not reachable from Vercel. Use the provider's **pooled** connection string —
+serverless functions open a connection per invocation and will exhaust a direct
+connection limit under any real traffic.
+
+On Supabase that means **Connection Pooling → Transaction mode, port 6543**, not
+the direct string on 5432:
+
+```
+postgresql://postgres.<ref>:<password>@aws-0-<region>.pooler.supabase.com:6543/postgres?sslmode=require&pgbouncer=true
+```
+
+`pgbouncer=true` matters: in transaction pooling mode a connection is handed back
+after every statement, so prepared statements can't persist and Prisma fails with
+"prepared statement already exists" without it.
 
 **2. Environment variables**, set in the Vercel project:
 
@@ -67,7 +76,7 @@ Most providers hand you a pooler URL ending in `-pooler`; it usually needs
 | `DATABASE_URL` | yes | Pooled connection string |
 | `AUTH_SECRET` | yes | `openssl rand -base64 32` |
 | `ENCRYPTION_KEY` | yes | A *different* 32-byte value. Falls back to `AUTH_SECRET`, but then rotating your session key locks out every connected calendar |
-| `NEXT_PUBLIC_APP_URL` | yes | The deployed origin, e.g. `https://meetsnaply.vercel.app`. **Booking links, meeting URLs, and every email link are built from this** — leave it as localhost and the live links point at your laptop |
+| `NEXT_PUBLIC_APP_URL` | only for a custom domain | The deployed origin. Every booking link, meeting URL, OAuth redirect, and email link is built from it. On Vercel you can leave it unset — `appUrl()` falls back to the injected `VERCEL_PROJECT_PRODUCTION_URL`. Set it explicitly the moment you point a real domain at the project |
 | `CRON_SECRET` | for emails | Vercel Cron sends it as a bearer token to `/api/jobs/run` |
 | `GOOGLE_CLIENT_ID` / `_SECRET` | optional | Redirect URI must be `<NEXT_PUBLIC_APP_URL>/api/calendar/google/callback` |
 | `RESEND_API_KEY`, `EMAIL_FROM` | optional | Without these, emails are logged, not sent |
