@@ -47,6 +47,33 @@ Postgres is published on **5433**, not 5432, so it won't collide with a local
 install. Set a real `AUTH_SECRET` before deploying anywhere
 (`openssl rand -base64 32`).
 
+## Tests
+
+```bash
+npm test
+```
+
+Node's built-in test runner (`node:test`) with `tsx` for TypeScript — no test
+framework dependency. `npm run test:watch` re-runs on change. Tests live beside
+the code they cover as `*.test.ts`. The run passes `--conditions=react-server`
+so `server-only` imports resolve, the same trick `npm run worker` uses.
+
+Most of it is pure and needs nothing. The queue is the exception: its
+correctness is in its SQL — `FOR UPDATE SKIP LOCKED`, `ON CONFLICT`, `NOW()` as
+the only clock — and none of that survives being mocked, so those tests want a
+real Postgres:
+
+```bash
+npm run test:db:setup
+```
+
+That creates `meetsnaply_test` next to the dev database and migrates it. Rerun
+it after adding a migration. `TEST_DATABASE_URL` overrides the target, and any
+database whose name does not end in `_test` is refused — the suite truncates the
+`Job` table between tests, and `claimJob` takes the globally oldest runnable job,
+so pointing it at a live database would eat real work. Without the test database
+the queue suite skips and everything else still runs.
+
 ---
 
 ## Deploying to Vercel
@@ -387,12 +414,12 @@ theme is a variable swap rather than a second set of classes.
    domain, and no `.ics` has been opened by a real Outlook, Google Calendar, or
    Apple Mail — which is exactly where malformed invites fail silently. This is
    the highest-value next step, and it needs credentials rather than code.
-2. **Tests.** The availability engine, `src/lib/crypto.ts`, and the queue are
-   where correctness lives, and all three are pure enough to test directly. There
-   is still no test runner in the project, which is the largest process gap — the
-   verification harnesses written during development were throwaway scripts and
-   should be real test files. Provider request/response handling wants recorded
-   fixtures rather than live calls.
+2. **Tests.** The three places correctness lives — the availability engine,
+   `src/lib/crypto.ts`, and the queue — are covered: 130 cases, including both
+   DST transitions, tampered ciphertext, and concurrent `SKIP LOCKED` claims.
+   What is still untested is everything with a provider on the other side:
+   Google Calendar, Resend, Daily, Deepgram. Those want recorded
+   request/response fixtures rather than live calls, and none exists yet.
 3. **Google Calendar push notifications**, replacing the live `freeBusy` call
    per request with a locally cached busy table. Then **Outlook**, which slots
    into the same `CalendarConnection` model and the same

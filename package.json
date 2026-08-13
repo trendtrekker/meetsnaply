@@ -8,6 +8,9 @@
     "build:app": "prisma generate && next build",
     "start": "next start",
     "lint": "eslint",
+    "test": "node --conditions=react-server --import tsx --test \"src/**/*.test.ts\"",
+    "test:watch": "node --conditions=react-server --import tsx --test --watch \"src/**/*.test.ts\"",
+    "test:db:setup": "tsx scripts/test-db.ts",
     "db:deploy": "prisma migrate deploy",
     "worker": "tsx --conditions=react-server scripts/worker.ts"
   },
