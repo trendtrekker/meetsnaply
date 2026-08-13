@@ -399,6 +399,29 @@ describe("failJob", () => {
     assert.ok(stored.runAfter.getTime() > (await dbNow()).getTime());
   });
 
+  dbIt("schedules the retry on the database's clock, not this process's", async () => {
+    // Pretend this server runs an hour ahead of Postgres. Attempt 3 backs off
+    // eight minutes, and it has to be eight minutes in *database* time —
+    // `claimJob` compares `runAfter` against `NOW()`, so a client-side
+    // timestamp would park the job an hour and eight minutes out.
+    const job = { ...(await claimed(99)), attempts: 3 };
+
+    const realNow = Date.now;
+    Date.now = () => realNow() + 60 * MINUTE;
+    try {
+      await queue.failJob(job, new Error("boom"));
+    } finally {
+      Date.now = realNow;
+    }
+
+    const stored = await readJob(job.id);
+    const delay = stored.runAfter.getTime() - (await dbNow()).getTime();
+    assert.ok(
+      Math.abs(delay - 8 * MINUTE) < MINUTE,
+      `runAfter was ${Math.round(delay / 1000)}s out, expected ~480s`,
+    );
+  });
+
   dbIt("backs off 30s, 2m, 8m, 32m, then caps at 2h", async () => {
     const expected = [30_000, 2 * MINUTE, 8 * MINUTE, 32 * MINUTE, 120 * MINUTE];
 

@@ -203,16 +203,22 @@ export async function failJob(
   }
 
   const delay = backoffMs(job.attempts);
-  await db.job.update({
-    where: { id: job.id },
-    data: {
-      status: "PENDING",
-      lastError: message.slice(0, 2000),
-      runAfter: new Date(Date.now() + delay),
-      lockedAt: null,
-      lockedBy: null,
-    },
-  });
+
+  // Raw SQL for the same reason `enqueue` uses it: `runAfter` is a schedule,
+  // and `claimJob` compares it against the database's `NOW()`. Computing it
+  // from this process's clock would shift every retry by however far that clock
+  // has drifted from Postgres — ahead, and the job sleeps through its backoff;
+  // behind, and it wakes early.
+  await db.$executeRaw`
+    UPDATE "Job" SET
+      status = 'PENDING',
+      "lastError" = ${message.slice(0, 2000)},
+      "runAfter" = NOW() + make_interval(secs => ${delay / 1000}),
+      "lockedAt" = NULL,
+      "lockedBy" = NULL,
+      "updatedAt" = NOW()
+    WHERE id = ${job.id};
+  `;
   return { willRetry: true as const, retryInMs: delay };
 }
 
