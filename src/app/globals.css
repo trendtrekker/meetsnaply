@@ -1,0 +1,171 @@
+@import "tailwindcss";
+
+/* Dark mode is class-driven so the host dashboard and the public booking page
+   can opt in independently of the OS setting. */
+@custom-variant dark (&:where(.dark, .dark *));
+
+/* ---------------------------------------------------------------------------
+   Palette — warm sand paper, near-black ink, a single burnt-orange accent.
+   Only the accent is allowed to be saturated; it marks primary actions and
+   selected state and nothing else.
+--------------------------------------------------------------------------- */
+@theme {
+  --color-brand-50: #fef4ef;
+  --color-brand-100: #fde4d8;
+  --color-brand-200: #fac6af;
+  --color-brand-300: #f6a17f;
+  --color-brand-400: #f27b51;
+  --color-brand-500: #e8552f;
+  --color-brand-600: #cf4523;
+  --color-brand-700: #a8351a;
+  --color-brand-800: #7e2814;
+  --color-brand-900: #5a1d0f;
+
+  --color-sand-50: #fdfcf6;
+  --color-sand-100: #f6f2e6;
+  --color-sand-200: #ede8d6;
+  --color-sand-300: #ded7c0;
+  --color-sand-400: #c3bb9f;
+
+  --color-ink-400: #8a8577;
+  --color-ink-500: #6e6a5c;
+  --color-ink-600: #4b493e;
+  --color-ink-700: #333128;
+  --color-ink-800: #22211b;
+  --color-ink-900: #171610;
+  --color-ink-950: #0e0e0a;
+
+  --radius-card: 1.5rem;
+  --radius-panel: 1.125rem;
+  --radius-field: 0.75rem;
+
+  --font-sans: var(--font-geist-sans), ui-sans-serif, system-ui, sans-serif;
+  --font-mono: var(--font-geist-mono), ui-monospace, monospace;
+}
+
+/* ---------------------------------------------------------------------------
+   Semantic layer — components reference these, never the raw ramp above.
+--------------------------------------------------------------------------- */
+:root {
+  --canvas: var(--color-sand-100);
+  --surface: #fffdf7;
+  --surface-muted: var(--color-sand-200);
+  --surface-inverted: var(--color-ink-900);
+  --border: var(--color-sand-300);
+  --border-strong: var(--color-sand-400);
+  --text: var(--color-ink-900);
+  --text-muted: var(--color-ink-500);
+  --text-inverted: var(--color-sand-100);
+  --primary: var(--color-brand-500);
+  --primary-hover: var(--color-brand-600);
+  --primary-fg: #fff8f4;
+  --primary-soft: var(--color-brand-100);
+  --ring: var(--color-brand-500);
+  --success: #2f7d5c;
+  --warning: #a8721a;
+  --danger: #b4341f;
+}
+
+.dark {
+  --canvas: var(--color-ink-950);
+  --surface: var(--color-ink-900);
+  --surface-muted: var(--color-ink-800);
+  --surface-inverted: var(--color-sand-100);
+  --border: #2c2b23;
+  --border-strong: #413f34;
+  --text: var(--color-sand-100);
+  --text-muted: var(--color-ink-400);
+  --text-inverted: var(--color-ink-900);
+  --primary: var(--color-brand-500);
+  --primary-hover: var(--color-brand-400);
+  --primary-fg: #fff8f4;
+  --primary-soft: #3a1f16;
+  --ring: var(--color-brand-400);
+  --success: #5fb08a;
+  --warning: #d9a441;
+  --danger: #e07a63;
+}
+
+@theme inline {
+  --color-canvas: var(--canvas);
+  --color-surface: var(--surface);
+  --color-surface-muted: var(--surface-muted);
+  --color-surface-inverted: var(--surface-inverted);
+  --color-border: var(--border);
+  --color-border-strong: var(--border-strong);
+  --color-text: var(--text);
+  --color-text-muted: var(--text-muted);
+  --color-text-inverted: var(--text-inverted);
+  --color-primary: var(--primary);
+  --color-primary-hover: var(--primary-hover);
+  --color-primary-fg: var(--primary-fg);
+  --color-primary-soft: var(--primary-soft);
+  --color-ring: var(--ring);
+  --color-success: var(--success);
+  --color-warning: var(--warning);
+  --color-danger: var(--danger);
+}
+
+@layer base {
+  * {
+    border-color: var(--border);
+  }
+
+  html {
+    -webkit-text-size-adjust: 100%;
+  }
+
+  body {
+    background-color: var(--canvas);
+    color: var(--text);
+    font-family: var(--font-sans);
+    font-feature-settings: "cv11", "ss01";
+    -webkit-font-smoothing: antialiased;
+  }
+
+  /* Type carries the hierarchy — headings are tight and heavy, body is calm. */
+  h1,
+  h2,
+  h3 {
+    letter-spacing: -0.033em;
+    text-wrap: balance;
+  }
+
+  :focus-visible {
+    outline: 2px solid var(--ring);
+    outline-offset: 2px;
+  }
+
+  ::selection {
+    background-color: var(--color-brand-200);
+    color: var(--color-ink-900);
+  }
+
+  .dark ::selection {
+    background-color: var(--color-brand-800);
+    color: var(--color-sand-100);
+  }
+}
+
+@layer utilities {
+  /* Display face used for the marketing hero and page titles. */
+  .text-display {
+    font-weight: 800;
+    letter-spacing: -0.04em;
+    line-height: 0.98;
+  }
+
+  .scrollbar-thin {
+    scrollbar-width: thin;
+    scrollbar-color: var(--border-strong) transparent;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    transition-duration: 0.01ms !important;
+  }
+}

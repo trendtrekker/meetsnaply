@@ -1,0 +1,515 @@
+generator client {
+  provider = "prisma-client"
+  output   = "../src/generated/prisma"
+}
+
+// Prisma 7 moved the connection URL out of the schema — see prisma.config.ts
+datasource db {
+  provider = "postgresql"
+}
+
+// ---------------------------------------------------------------------------
+// Accounts
+// ---------------------------------------------------------------------------
+
+model User {
+  id           String   @id @default(cuid())
+  email        String   @unique
+  passwordHash String
+  name         String
+  /// Public booking handle: meetsnaply.com/{username}
+  username     String   @unique
+  avatarUrl    String?
+  bio          String?
+  /// IANA zone, e.g. "Europe/Berlin". Availability is authored in this zone.
+  timeZone     String   @default("UTC")
+  brandColor   String   @default("#E8552F")
+  emailVerified DateTime?
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  schedules           Schedule[]
+  eventTypes          EventType[]
+  bookings            Booking[]
+  calendarConnections CalendarConnection[]
+}
+
+enum CalendarProvider {
+  GOOGLE
+  MICROSOFT
+  APPLE
+  CALDAV
+}
+
+model CalendarConnection {
+  id           String           @id @default(cuid())
+  userId       String
+  provider     CalendarProvider
+  accountEmail String
+  /// Provider's stable account id. Emails can change; this cannot.
+  providerAccountId String?
+  /// AES-256-GCM ciphertext — never a raw token. See src/lib/crypto.ts.
+  accessToken  String
+  refreshToken String?
+  expiresAt    DateTime?
+  /// Space-separated OAuth scopes actually granted, which may be fewer than
+  /// the ones requested if the user unticked a box on the consent screen.
+  scope        String?
+  /// Which calendar inside the account to read and write. "primary" unless
+  /// the user picks another.
+  calendarId   String  @default("primary")
+
+  /// Read this calendar when checking for conflicts.
+  checkConflicts Boolean @default(true)
+  /// Write confirmed bookings here. At most one per user is true.
+  isDestination  Boolean @default(false)
+
+  lastSyncedAt   DateTime?
+  /// Set when the provider rejected us — revoked grant, expired refresh
+  /// token. Surfaced in settings so the user can reconnect.
+  lastError      String?
+  lastErrorAt    DateTime?
+
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, provider, accountEmail])
+  @@index([userId])
+}
+
+// ---------------------------------------------------------------------------
+// Availability
+// ---------------------------------------------------------------------------
+
+model Schedule {
+  id        String   @id @default(cuid())
+  userId    String
+  name      String
+  /// Zone the rules below are expressed in.
+  timeZone  String   @default("UTC")
+  isDefault Boolean  @default(false)
+  createdAt DateTime @default(now())
+
+  user       User               @relation(fields: [userId], references: [id], onDelete: Cascade)
+  rules      AvailabilityRule[]
+  overrides  DateOverride[]
+  eventTypes EventType[]
+
+  @@index([userId])
+}
+
+/// One bookable window on one weekday, in minutes from local midnight.
+model AvailabilityRule {
+  id          String @id @default(cuid())
+  scheduleId  String
+  /// 0 = Sunday … 6 = Saturday (matches JS getDay()).
+  weekday     Int
+  startMinute Int
+  endMinute   Int
+
+  schedule Schedule @relation(fields: [scheduleId], references: [id], onDelete: Cascade)
+
+  @@index([scheduleId, weekday])
+}
+
+/// Replaces the weekly rules for a single calendar date.
+model DateOverride {
+  id          String   @id @default(cuid())
+  scheduleId  String
+  /// Local calendar date, stored at UTC midnight.
+  date        DateTime @db.Date
+  /// When true the day is fully blocked and the minute range is ignored.
+  isBlocked   Boolean  @default(true)
+  startMinute Int?
+  endMinute   Int?
+  note        String?
+
+  schedule Schedule @relation(fields: [scheduleId], references: [id], onDelete: Cascade)
+
+  @@unique([scheduleId, date])
+}
+
+// ---------------------------------------------------------------------------
+// Event types
+// ---------------------------------------------------------------------------
+
+enum LocationType {
+  MEETSNAPLY_VIDEO
+  GOOGLE_MEET
+  ZOOM
+  MICROSOFT_TEAMS
+  PHONE_HOST_CALLS
+  PHONE_INVITEE_CALLS
+  IN_PERSON
+  CUSTOM
+}
+
+model EventType {
+  id          String  @id @default(cuid())
+  userId      String
+  /// URL segment: meetsnaply.com/{username}/{slug}
+  slug        String
+  title       String
+  description String?
+  color       String  @default("#E8552F")
+  position    Int     @default(0)
+
+  durationMinutes      Int @default(30)
+  /// Slot grid granularity. 15 shows :00/:15/:30/:45 starts for a 30m event.
+  slotIntervalMinutes  Int @default(15)
+  bufferBeforeMinutes  Int @default(0)
+  bufferAfterMinutes   Int @default(0)
+  /// Invitees cannot book anything starting sooner than this.
+  minimumNoticeMinutes Int @default(240)
+  /// How far ahead the calendar is open.
+  bookingHorizonDays   Int @default(60)
+  maxBookingsPerDay    Int?
+
+  isActive             Boolean @default(true)
+  /// Hidden from the public profile; reachable by direct link only.
+  isPrivate            Boolean @default(false)
+  requiresConfirmation Boolean @default(false)
+
+  locationType  LocationType @default(MEETSNAPLY_VIDEO)
+  /// Address, phone number, or custom instructions depending on locationType.
+  locationValue String?
+
+  recordingEnabled     Boolean @default(false)
+  transcriptionEnabled Boolean @default(false)
+  /// Email the AI recap + transcript to every attendee once the call ends.
+  sendRecapToAttendees Boolean @default(false)
+  /// Days the meeting audio is kept before the purge job deletes it. The
+  /// transcript and recap outlive it — the audio is the sensitive artefact.
+  recordingRetentionDays Int @default(30)
+
+  /// Minutes before the start to send each reminder. Empty disables reminders.
+  reminderMinutes Int[] @default([1440, 60])
+
+  scheduleId String?
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  user      User              @relation(fields: [userId], references: [id], onDelete: Cascade)
+  schedule  Schedule?         @relation(fields: [scheduleId], references: [id], onDelete: SetNull)
+  questions BookingQuestion[]
+  bookings  Booking[]
+
+  @@unique([userId, slug])
+  @@index([userId])
+}
+
+enum QuestionType {
+  TEXT
+  TEXTAREA
+  SELECT
+  MULTISELECT
+  RADIO
+  CHECKBOX
+  PHONE
+  NUMBER
+  URL
+}
+
+model BookingQuestion {
+  id          String       @id @default(cuid())
+  eventTypeId String
+  /// Stable key used in answers and URL prefill.
+  identifier  String
+  label       String
+  helpText    String?
+  type        QuestionType @default(TEXT)
+  required    Boolean      @default(false)
+  /// Choices for SELECT / MULTISELECT / RADIO.
+  options     String[]     @default([])
+  position    Int          @default(0)
+
+  eventType EventType       @relation(fields: [eventTypeId], references: [id], onDelete: Cascade)
+  answers   BookingAnswer[]
+
+  @@unique([eventTypeId, identifier])
+}
+
+// ---------------------------------------------------------------------------
+// Bookings
+// ---------------------------------------------------------------------------
+
+enum BookingStatus {
+  PENDING
+  CONFIRMED
+  CANCELLED
+  REJECTED
+}
+
+enum AttendeeStatus {
+  NEEDS_ACTION
+  ACCEPTED
+  DECLINED
+  NO_SHOW
+}
+
+model Booking {
+  id          String @id @default(cuid())
+  /// Public, unguessable token used in confirm / reschedule / cancel links.
+  uid         String @unique @default(cuid())
+  eventTypeId String
+  hostId      String
+
+  title       String
+  description String?
+
+  startTime DateTime
+  endTime   DateTime
+  /// Timezone the invitee booked in, so emails render in their local time.
+  timeZone  String
+
+  status BookingStatus @default(CONFIRMED)
+
+  locationType  LocationType
+  locationValue String?
+  meetingUrl    String?
+
+  /// Identity of this meeting *as a calendar event*, which is not the same as
+  /// the booking row. A reschedule creates a new booking but inherits this, so
+  /// the invitee's calendar sees one event that moved rather than a cancellation
+  /// followed by an unrelated new invitation.
+  calendarUid       String    @default(cuid())
+  /// Bumped whenever an .ics for this event is reissued. Calendar clients
+  /// ignore an update whose SEQUENCE is not higher than the one they hold.
+  calendarSequence  Int       @default(0)
+
+  hostNotes         String?
+  cancelReason      String?
+  cancelledAt       DateTime?
+  rescheduledFromId String?   @unique
+
+  /// Event id in the host's destination calendar, so the mirrored event can be
+  /// patched or deleted later. Null when no calendar is connected.
+  externalEventId      String?
+  externalCalendarId   String?
+  externalConnectionId String?
+  /// Last error from mirroring this booking out to the calendar. The booking
+  /// itself is still valid — sync failures must never lose a booking.
+  externalSyncError    String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  eventType       EventType       @relation(fields: [eventTypeId], references: [id], onDelete: Restrict)
+  host            User            @relation(fields: [hostId], references: [id], onDelete: Cascade)
+  rescheduledFrom Booking?        @relation("Reschedule", fields: [rescheduledFromId], references: [id], onDelete: SetNull)
+  rescheduledTo   Booking?        @relation("Reschedule")
+  attendees       Attendee[]
+  answers         BookingAnswer[]
+  recording       MeetingRecording?
+  recap           MeetingRecap?
+
+  @@index([hostId, startTime])
+  @@index([eventTypeId, startTime])
+  @@index([startTime])
+  /// Not unique: a rescheduled booking shares its predecessor's value, and only
+  /// the live one is uncancelled.
+  @@index([calendarUid])
+}
+
+model Attendee {
+  id        String         @id @default(cuid())
+  bookingId String
+  name      String
+  email     String
+  timeZone  String
+  /// Extra guests added by the invitee at booking time.
+  isGuest   Boolean        @default(false)
+  status    AttendeeStatus @default(NEEDS_ACTION)
+  /// Set when this attendee accepted recording + transcription.
+  recordingConsentAt DateTime?
+
+  booking    Booking         @relation(fields: [bookingId], references: [id], onDelete: Cascade)
+  deliveries RecapDelivery[]
+
+  @@index([bookingId])
+  @@index([email])
+}
+
+model BookingAnswer {
+  id         String @id @default(cuid())
+  bookingId  String
+  questionId String?
+  /// Denormalised so the answer survives the question being edited or deleted.
+  label      String
+  value      String
+
+  booking  Booking          @relation(fields: [bookingId], references: [id], onDelete: Cascade)
+  question BookingQuestion? @relation(fields: [questionId], references: [id], onDelete: SetNull)
+
+  @@index([bookingId])
+}
+
+// ---------------------------------------------------------------------------
+// Recording, transcription, recap
+// ---------------------------------------------------------------------------
+
+enum RecordingStatus {
+  SCHEDULED
+  IN_PROGRESS
+  PROCESSING
+  READY
+  FAILED
+  DELETED
+}
+
+enum TranscriptStatus {
+  QUEUED
+  PROCESSING
+  READY
+  FAILED
+}
+
+model MeetingRecording {
+  id        String @id @default(cuid())
+  bookingId String @unique
+
+  /// "daily" | "livekit" | "zoom" …
+  provider        String
+  /// Provider's room identifier, needed to correlate webhooks back to us.
+  roomName        String?
+  externalId      String?
+  audioUrl        String?
+  durationSeconds Int?
+  status          RecordingStatus @default(SCHEDULED)
+  /// Hard-delete deadline enforced by the retention job.
+  expiresAt       DateTime?
+  /// Set once the audio has actually been purged, so the row can stay as an
+  /// audit record of a recording that existed and was deleted on schedule.
+  purgedAt        DateTime?
+  createdAt       DateTime        @default(now())
+
+  @@index([roomName])
+
+  booking    Booking     @relation(fields: [bookingId], references: [id], onDelete: Cascade)
+  transcript Transcript?
+}
+
+model Transcript {
+  id          String           @id @default(cuid())
+  recordingId String           @unique
+  language    String           @default("en")
+  status      TranscriptStatus @default(QUEUED)
+  /// Flat text, kept for search and for the plaintext email attachment.
+  fullText    String?
+  provider    String?
+  createdAt   DateTime         @default(now())
+
+  recording MeetingRecording   @relation(fields: [recordingId], references: [id], onDelete: Cascade)
+  segments  TranscriptSegment[]
+}
+
+/// Diarised chunk of a transcript.
+model TranscriptSegment {
+  id           String  @id @default(cuid())
+  transcriptId String
+  /// Provider speaker label, mapped to an attendee where possible.
+  speaker      String
+  attendeeId   String?
+  startMs      Int
+  endMs        Int
+  text         String
+  confidence   Float?
+
+  transcript Transcript @relation(fields: [transcriptId], references: [id], onDelete: Cascade)
+
+  @@index([transcriptId, startMs])
+}
+
+enum JobStatus {
+  PENDING
+  RUNNING
+  DONE
+  FAILED
+}
+
+/// Background work queue.
+///
+/// Postgres rather than Redis/BullMQ on purpose: the pipeline's throughput is a
+/// handful of jobs per meeting, and `FOR UPDATE SKIP LOCKED` gives exactly-once
+/// claiming without a second piece of infrastructure to run and monitor. Swap
+/// this for a real broker when volume justifies the operational cost.
+model Job {
+  id       String    @id @default(cuid())
+  /// Handler key — see src/lib/jobs/handlers.ts.
+  type     String
+  payload  Json      @default("{}")
+  status   JobStatus @default(PENDING)
+
+  /// Collapses duplicate enqueues (a webhook delivered twice, a manual retry
+  /// racing the scheduler) onto one row.
+  dedupeKey String? @unique
+
+  attempts    Int @default(0)
+  maxAttempts Int @default(5)
+
+  /// Not eligible to run before this. Drives both scheduling and backoff.
+  runAfter  DateTime @default(now())
+  /// Set while a worker holds the job; a stale value means the worker died.
+  lockedAt  DateTime?
+  lockedBy  String?
+
+  lastError   String?
+  startedAt   DateTime?
+  completedAt DateTime?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([status, runAfter])
+  @@index([type, status])
+}
+
+model MeetingRecap {
+  id        String @id @default(cuid())
+  bookingId String @unique
+
+  summary     String
+  decisions   String[] @default([])
+  /// [{ "text": "…", "owner": "…", "due": "…" }]
+  actionItems Json     @default("[]")
+  /// Anything raised but left unresolved, so the recap doesn't imply closure.
+  openQuestions String[] @default([])
+  model       String?
+  /// Tokens spent, for cost attribution per meeting.
+  inputTokens  Int?
+  outputTokens Int?
+  /// Null until the recap email has gone out to every attendee.
+  sentAt      DateTime?
+  createdAt   DateTime @default(now())
+
+  booking    Booking          @relation(fields: [bookingId], references: [id], onDelete: Cascade)
+  deliveries RecapDelivery[]
+}
+
+/// One row per attendee the recap was sent to.
+///
+/// Tracked per recipient rather than as a single flag so a bounce for one
+/// address doesn't make the whole recap look unsent, and so a retry can skip
+/// the addresses that already succeeded.
+model RecapDelivery {
+  id       String @id @default(cuid())
+  recapId  String
+  /// Denormalised: the attendee row may be gone, the delivery record shouldn't.
+  email    String
+  attendeeId String?
+
+  sentAt            DateTime?
+  failedAt          DateTime?
+  error             String?
+  providerMessageId String?
+
+  createdAt DateTime @default(now())
+
+  recap    MeetingRecap @relation(fields: [recapId], references: [id], onDelete: Cascade)
+  attendee Attendee?    @relation(fields: [attendeeId], references: [id], onDelete: SetNull)
+
+  @@unique([recapId, email])
+  @@index([recapId])
+}
