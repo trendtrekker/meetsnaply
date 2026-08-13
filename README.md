@@ -62,12 +62,19 @@ On Supabase that means **Connection Pooling → Transaction mode, port 6543**, n
 the direct string on 5432:
 
 ```
-postgresql://postgres.<ref>:<password>@aws-0-<region>.pooler.supabase.com:6543/postgres?sslmode=require&pgbouncer=true
+postgresql://postgres.<ref>:<password>@aws-1-<region>.pooler.supabase.com:6543/postgres?sslmode=require
 ```
 
-`pgbouncer=true` matters: in transaction pooling mode a connection is handed back
-after every statement, so prepared statements can't persist and Prisma fails with
-"prepared statement already exists" without it.
+No `pgbouncer=true` is needed here, despite it being the usual advice for Prisma
+behind PgBouncer. That flag existed to stop Prisma's old Rust engine reusing
+*named* prepared statements across pooled connections. Prisma 7 talks to Postgres
+through `@prisma/adapter-pg`, which only names a statement when you pass a
+`statementNameGenerator` — `src/lib/db.ts` doesn't, so every statement is unnamed
+and transaction pooling is safe.
+
+Migrations are the exception: `prisma migrate deploy` runs DDL and advisory locks
+that want a real session, so point it at the **direct** connection on port 5432
+(`DIRECT_DATABASE_URL`) if migrations misbehave against the pooler.
 
 **2. Environment variables**, set in the Vercel project:
 
