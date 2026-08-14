@@ -1,5 +1,5 @@
 import "server-only";
-import { revalidatePath } from "next/cache";
+import { refreshPath } from "@/lib/cache";
 import { db } from "@/lib/db";
 import { tryDecrypt } from "@/lib/crypto";
 import { revokeToken } from "./google";
@@ -37,7 +37,7 @@ export async function disconnectCalendarForUser(
 
   await db.calendarConnection.delete({ where: { id: connection.id } });
 
-  revalidatePath("/dashboard/settings");
+  refreshPath("/dashboard/settings");
   return { ok: true };
 }
 
@@ -55,7 +55,7 @@ export async function setConflictChecking(
     },
   });
 
-  revalidatePath("/dashboard/settings");
+  refreshPath("/dashboard/settings");
   return { ok: count > 0 };
 }
 
@@ -79,6 +79,6 @@ export async function setDestinationCalendarForUser(
     }),
   ]);
 
-  revalidatePath("/dashboard/settings");
+  refreshPath("/dashboard/settings");
   return { ok: true };
 }

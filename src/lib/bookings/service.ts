@@ -1,5 +1,5 @@
 import "server-only";
-import { revalidatePath } from "next/cache";
+import { refreshPath } from "@/lib/cache";
 import { db } from "@/lib/db";
 import { getBookableEventType, verifySlot } from "@/lib/availability";
 import {
@@ -28,9 +28,9 @@ import {
  * browser. Callers own only two things: turning their transport into the input
  * shape, and deciding what to do with the result — redirect, or serialise.
  *
- * `revalidatePath` lives in here rather than in the callers so that a write
- * from any surface refreshes the dashboard. Forgetting it in one caller would
- * leave a booking invisible until the next hard reload.
+ * `refreshPath` lives in here rather than in the callers so that a write from
+ * any surface refreshes the dashboard. Forgetting it in one caller would leave
+ * a booking invisible until the next hard reload.
  */
 
 export type BookSlotResult =
@@ -274,7 +274,7 @@ export async function bookSlot(
     await scheduleReminders(bookingId);
   }
 
-  revalidatePath("/dashboard");
+  refreshPath("/dashboard");
   return { ok: true, uid };
 }
 
@@ -313,7 +313,7 @@ export async function cancelBookingByUid(
     dedupeKey: `booking-cancelled:${booking.id}`,
   });
 
-  revalidatePath("/dashboard");
+  refreshPath("/dashboard");
   return { ok: true };
 }
 
@@ -360,7 +360,7 @@ export async function setBookingStatusForHost(
     });
   }
 
-  revalidatePath("/dashboard");
-  revalidatePath(`/dashboard/bookings/${input.uid}`);
+  refreshPath("/dashboard");
+  refreshPath(`/dashboard/bookings/${input.uid}`);
   return { ok: true };
 }

@@ -1,7 +1,7 @@
 import "server-only";
 import bcrypt from "bcryptjs";
 import { db } from "@/lib/db";
-import { USER_SELECT } from "@/lib/auth";
+import { USER_SELECT } from "@/lib/auth/select";
 import type { SignInInput, SignUpInput } from "@/lib/api/contracts";
 import { slugify } from "@/lib/utils";
 

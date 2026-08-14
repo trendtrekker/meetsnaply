@@ -1,5 +1,5 @@
 import "server-only";
-import { revalidatePath } from "next/cache";
+import { refreshPath } from "@/lib/cache";
 import { db } from "@/lib/db";
 import type {
   DateOverrideInput,
@@ -76,7 +76,7 @@ export async function saveWeeklyRules(
     }),
   ]);
 
-  revalidatePath("/dashboard/availability");
+  refreshPath("/dashboard/availability");
   return { ok: true };
 }
 
@@ -109,7 +109,7 @@ export async function upsertDateOverride(
     update: fields,
   });
 
-  revalidatePath("/dashboard/availability");
+  refreshPath("/dashboard/availability");
   return { ok: true };
 }
 
@@ -121,6 +121,6 @@ export async function deleteDateOverride(
     where: { id, schedule: { userId } },
   });
 
-  revalidatePath("/dashboard/availability");
+  refreshPath("/dashboard/availability");
   return { ok: count > 0 };
 }

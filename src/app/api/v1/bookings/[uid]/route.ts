@@ -2,7 +2,7 @@ import type { NextRequest } from "next/server";
 import { apiUser } from "@/lib/api/auth";
 import { notFound, ok, unauthorized } from "@/lib/api/respond";
 import { getHostBooking } from "@/lib/bookings/queries";
-import { pipelineJobsForBooking } from "@/lib/jobs/actions";
+import { pipelineJobsForBooking } from "@/lib/jobs/pipeline-service";
 
 /**
  * One booking the caller hosts, with its recap-pipeline jobs.

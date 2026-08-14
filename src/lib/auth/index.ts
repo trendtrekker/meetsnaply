@@ -4,20 +4,9 @@ import { redirect } from "next/navigation";
 import { db } from "@/lib/db";
 import { getSession } from "./session";
 
-/**
- * The fields that make up a signed-in user everywhere they are needed — the
- * dashboard, and the API's `/me`. Never includes `passwordHash`.
- */
-export const USER_SELECT = {
-  id: true,
-  email: true,
-  name: true,
-  username: true,
-  avatarUrl: true,
-  bio: true,
-  timeZone: true,
-  brandColor: true,
-} as const;
+import { USER_SELECT } from "./select";
+
+export { USER_SELECT };
 
 /** Current user or null. Deduped per request. */
 export const getCurrentUser = cache(async () => {

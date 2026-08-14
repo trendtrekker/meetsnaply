@@ -7,7 +7,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardBody, CardHeader, CardTitle } from "@/components/ui/card";
 import { setBookingStatus } from "@/lib/bookings/actions";
-import { pipelineJobsForBooking } from "@/lib/jobs/actions";
+import { pipelineJobsForBooking } from "@/lib/jobs/pipeline-service";
 import { PipelinePanel } from "@/components/dashboard/pipeline-panel";
 import { describeLocation } from "@/lib/bookings/locations";
 import { formatDateTime, zoneAbbreviation } from "@/lib/datetime";

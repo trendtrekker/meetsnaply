@@ -1,7 +1,8 @@
 import "server-only";
-import { revalidatePath } from "next/cache";
+import { refreshPath } from "@/lib/cache";
 import { db } from "@/lib/db";
-import { USER_SELECT, type CurrentUser } from "@/lib/auth";
+import { USER_SELECT } from "@/lib/auth/select";
+import type { CurrentUser } from "@/lib/auth";
 import type { UpdateSettingsInput } from "@/lib/api/contracts";
 
 /**
@@ -45,6 +46,6 @@ export async function updateProfile(
     select: USER_SELECT,
   });
 
-  revalidatePath("/dashboard");
+  refreshPath("/dashboard");
   return { ok: true, user: updated, usernameChanged };
 }

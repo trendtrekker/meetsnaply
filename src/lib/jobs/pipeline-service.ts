@@ -1,7 +1,48 @@
 import "server-only";
-import { revalidatePath } from "next/cache";
+import { refreshPath } from "@/lib/cache";
 import { db } from "@/lib/db";
-import { enqueue, retryJob } from "./queue";
+import { enqueue, retryJob, type JobType } from "./queue";
+
+const PIPELINE_TYPES: JobType[] = [
+  "recording.process",
+  "transcript.generate",
+  "recap.generate",
+  "recap.send",
+  "recording.purge",
+];
+
+/** Jobs belonging to one booking, for the pipeline panel. */
+export async function pipelineJobsForBooking(bookingId: string) {
+  const recording = await db.meetingRecording.findUnique({
+    where: { bookingId },
+    select: { id: true },
+  });
+
+  // Payloads are keyed by either booking or recording id depending on the stage,
+  // so both are needed to find every job for one meeting.
+  const ids = [bookingId, recording?.id].filter(Boolean) as string[];
+
+  return db.job.findMany({
+    where: {
+      type: { in: PIPELINE_TYPES },
+      OR: ids.flatMap((id) => [
+        { payload: { path: ["bookingId"], equals: id } },
+        { payload: { path: ["recordingId"], equals: id } },
+      ]),
+    },
+    orderBy: { createdAt: "asc" },
+    select: {
+      id: true,
+      type: true,
+      status: true,
+      attempts: true,
+      maxAttempts: true,
+      runAfter: true,
+      lastError: true,
+      completedAt: true,
+    },
+  });
+}
 
 /**
  * Host-facing controls for the recap pipeline, independent of transport.
@@ -48,7 +89,7 @@ export async function retryPipelineJobFor(
   if (!(await ownsJob(userId, jobId))) return { ok: false };
 
   await retryJob(jobId);
-  if (uid) revalidatePath(`/dashboard/bookings/${uid}`);
+  if (uid) refreshPath(`/dashboard/bookings/${uid}`);
   return { ok: true };
 }
 
@@ -79,6 +120,6 @@ export async function reprocessRecordingFor(
     dedupeKey: `process:manual:${booking.recording.id}:${Date.now()}`,
   });
 
-  revalidatePath(`/dashboard/bookings/${uid}`);
+  refreshPath(`/dashboard/bookings/${uid}`);
   return { ok: true };
 }

@@ -1,5 +1,5 @@
 import "server-only";
-import { revalidatePath } from "next/cache";
+import { refreshPath } from "@/lib/cache";
 import { db } from "@/lib/db";
 import { slugify } from "@/lib/utils";
 import { isRecordable } from "@/lib/bookings/locations";
@@ -82,7 +82,7 @@ export async function createEventTypeFor(
     select: { id: true },
   });
 
-  revalidatePath("/dashboard/event-types");
+  refreshPath("/dashboard/event-types");
   return created;
 }
 
@@ -100,8 +100,8 @@ export async function updateEventTypeFor(
   const slug = await uniqueSlug(userId, data.slug || data.title, id);
   await db.eventType.update({ where: { id }, data: columns(data, slug) });
 
-  revalidatePath("/dashboard/event-types");
-  revalidatePath(`/dashboard/event-types/${id}`);
+  refreshPath("/dashboard/event-types");
+  refreshPath(`/dashboard/event-types/${id}`);
   return { ok: true };
 }
 
@@ -125,6 +125,6 @@ export async function removeEventType(
         })
       : await db.eventType.deleteMany({ where: { id, userId } });
 
-  revalidatePath("/dashboard/event-types");
+  refreshPath("/dashboard/event-types");
   return { ok: count > 0, archived: bookingCount > 0 };
 }

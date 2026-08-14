@@ -1,6 +1,6 @@
 import "server-only";
 import { db } from "@/lib/db";
-import { USER_SELECT } from "@/lib/auth";
+import { USER_SELECT } from "@/lib/auth/select";
 import { getSessionFromRequest } from "@/lib/auth/session";
 
 /**
