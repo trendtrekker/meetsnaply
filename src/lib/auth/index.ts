@@ -4,6 +4,21 @@ import { redirect } from "next/navigation";
 import { db } from "@/lib/db";
 import { getSession } from "./session";
 
+/**
+ * The fields that make up a signed-in user everywhere they are needed — the
+ * dashboard, and the API's `/me`. Never includes `passwordHash`.
+ */
+export const USER_SELECT = {
+  id: true,
+  email: true,
+  name: true,
+  username: true,
+  avatarUrl: true,
+  bio: true,
+  timeZone: true,
+  brandColor: true,
+} as const;
+
 /** Current user or null. Deduped per request. */
 export const getCurrentUser = cache(async () => {
   const session = await getSession();
@@ -11,16 +26,7 @@ export const getCurrentUser = cache(async () => {
 
   return db.user.findUnique({
     where: { id: session.userId },
-    select: {
-      id: true,
-      email: true,
-      name: true,
-      username: true,
-      avatarUrl: true,
-      bio: true,
-      timeZone: true,
-      brandColor: true,
-    },
+    select: USER_SELECT,
   });
 });
 

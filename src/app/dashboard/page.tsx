@@ -1,13 +1,18 @@
 import Link from "next/link";
 import { Mic, Users, Video } from "lucide-react";
 import { requireUser } from "@/lib/auth";
-import { db } from "@/lib/db";
 import { Badge } from "@/components/ui/badge";
 import { formatDateTime, formatDayMonth, formatTime } from "@/lib/datetime";
 import { formatDuration } from "@/lib/utils";
-import type { BookingStatus } from "@/generated/prisma/enums";
+import {
+  countUnconfirmed,
+  listBookings,
+  type BookingTab,
+} from "@/lib/bookings/queries";
 
-type Tab = "upcoming" | "past" | "unconfirmed" | "cancelled";
+// The tab definitions and their queries are shared with /api/v1 so the native
+// app and this page can never disagree about which meetings are "past".
+type Tab = BookingTab;
 
 const TABS: { key: Tab; label: string }[] = [
   { key: "upcoming", label: "Upcoming" },
@@ -15,31 +20,6 @@ const TABS: { key: Tab; label: string }[] = [
   { key: "past", label: "Past" },
   { key: "cancelled", label: "Cancelled" },
 ];
-
-function whereFor(tab: Tab, userId: string, now: Date) {
-  const base = { hostId: userId };
-  switch (tab) {
-    case "unconfirmed":
-      return { ...base, status: "PENDING" as BookingStatus };
-    case "past":
-      return {
-        ...base,
-        status: { in: ["CONFIRMED", "PENDING"] as BookingStatus[] },
-        endTime: { lt: now },
-      };
-    case "cancelled":
-      return {
-        ...base,
-        status: { in: ["CANCELLED", "REJECTED"] as BookingStatus[] },
-      };
-    default:
-      return {
-        ...base,
-        status: "CONFIRMED" as BookingStatus,
-        endTime: { gte: now },
-      };
-  }
-}
 
 export default async function BookingsPage({
   searchParams,
@@ -55,19 +35,8 @@ export default async function BookingsPage({
   const now = new Date();
 
   const [bookings, counts] = await Promise.all([
-    db.booking.findMany({
-      where: whereFor(tab, user.id, now),
-      orderBy: { startTime: tab === "past" ? "desc" : "asc" },
-      take: 50,
-      include: {
-        eventType: { select: { title: true, transcriptionEnabled: true } },
-        attendees: { orderBy: { isGuest: "asc" } },
-        recap: { select: { id: true, sentAt: true } },
-      },
-    }),
-    db.booking.count({
-      where: whereFor("unconfirmed", user.id, now),
-    }),
+    listBookings(user.id, tab, now),
+    countUnconfirmed(user.id, now),
   ]);
 
   return (
