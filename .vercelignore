@@ -1,0 +1,4 @@
+# The Expo app is a separate package with its own dependency tree. Vercel
+# installs and builds from the repository root, so without this it would pull
+# React Native into a Next.js deployment that has no use for it.
+mobile/

@@ -1,0 +1,20 @@
+{
+  "expo": {
+    "name": "meetsnaply",
+    "slug": "meetsnaply",
+    "version": "0.1.0",
+    "scheme": "meetsnaply",
+    "orientation": "portrait",
+    "userInterfaceStyle": "automatic",
+    "newArchEnabled": true,
+    "plugins": ["expo-router"],
+    "android": {
+      "package": "dev.meetsnaply.app",
+      "edgeToEdgeEnabled": true
+    },
+    "ios": {
+      "supportsTablet": true,
+      "bundleIdentifier": "dev.meetsnaply.app"
+    }
+  }
+}

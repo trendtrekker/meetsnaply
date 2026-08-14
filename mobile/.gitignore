@@ -1,0 +1,25 @@
+# The root .gitignore anchors /node_modules to the repository root, so this
+# package needs its own. package-lock.json is deliberately NOT ignored: it is
+# what pins the SDK 54 dependency tree that Expo Go can actually run.
+node_modules/
+
+# Expo build and cache output
+.expo/
+dist/
+web-build/
+expo-env.d.ts
+
+# Native projects, when prebuild generates them
+/android
+/ios
+
+# Signing material — never commit any of this
+*.jks
+*.p8
+*.p12
+*.key
+*.mobileprovision
+
+*.orig.*
+npm-debug.*
+.DS_Store
